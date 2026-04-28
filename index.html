@@ -8,47 +8,49 @@
     <script type="module">
         // Firebase Setup & Logic (BẢNG XẾP HẠNG TOÀN CẦU)
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        let db, auth, user, currentAppId;
+        let db, auth, user;
 
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'bomb-ninja-v2';
+        // Cấu hình Firebase CỦA RIÊNG BẠN
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwKx_btF8EvR5Xp0sM2pi_VT6wWQdF4ec",
+            authDomain: "chem-bom-game.firebaseapp.com",
+            projectId: "chem-bom-game",
+            storageBucket: "chem-bom-game.firebasestorage.app",
+            messagingSenderId: "521625372789",
+            appId: "1:521625372789:web:d583224c097c779cab103c"
+        };
 
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                        console.error("Auth error:", e);
-                    }
-                };
-                initAuth();
+        try {
+            // Khởi tạo Firebase
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
 
-                onAuthStateChanged(auth, (u) => {
-                    user = u;
-                    if (user) loadGlobalLeaderboard();
-                });
-            } catch (error) {
-                console.error("Firebase init failed:", error);
-            }
+            // Tự động đăng nhập ẩn danh
+            signInAnonymously(auth).catch((error) => {
+                console.error("Lỗi đăng nhập Firebase:", error);
+            });
+
+            onAuthStateChanged(auth, (u) => {
+                user = u;
+                if (user) {
+                    loadGlobalLeaderboard();
+                }
+            });
+        } catch (error) {
+            console.error("Firebase init failed:", error);
         }
 
+        // --- Leaderboard Logic ---
         let topScores = [];
         window.isSubmittingScore = false;
 
         function loadGlobalLeaderboard() {
             if (!user || !db) return;
-            const lbRef = collection(db, 'artifacts', currentAppId, 'public', 'data', 'leaderboard');
+            const lbRef = collection(db, 'leaderboard');
             onSnapshot(lbRef, (snapshot) => {
                 let scores = [];
                 snapshot.forEach(doc => { scores.push({ id: doc.id, ...doc.data() }); });
@@ -56,14 +58,14 @@
                 topScores = scores.slice(0, 5);
                 renderLeaderboard();
             }, (error) => {
-                document.getElementById('leaderboardList').innerHTML = '<li class="text-gray-400 text-sm">Không tải được dữ liệu</li>';
+                document.getElementById('leaderboardList').innerHTML = '<li class="text-gray-400 text-sm">Không tải được dữ liệu bảng vàng</li>';
             });
         }
 
         function renderLeaderboard() {
             const list = document.getElementById('leaderboardList');
             if (topScores.length === 0) {
-                list.innerHTML = '<li class="text-gray-400 text-sm">Chưa có ai chơi!</li>';
+                list.innerHTML = '<li class="text-gray-400 text-sm">Chưa có ai chơi! Hãy là người đầu tiên.</li>';
                 return;
             }
             list.innerHTML = topScores.map((s, index) => {
@@ -82,7 +84,7 @@
             if (!user || !db || isSubmittingScore || !name.trim()) return false;
             window.isSubmittingScore = true;
             try {
-                const lbRef = collection(db, 'artifacts', currentAppId, 'public', 'data', 'leaderboard');
+                const lbRef = collection(db, 'leaderboard');
                 await addDoc(lbRef, {
                     name: name.substring(0, 15),
                     score: score,
@@ -94,16 +96,8 @@
         };
     </script>
     <style>
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            background-color: #0f172a; touch-action: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none;
-        }
-        #gameCanvas {
-            display: block; width: 100%; height: 100%;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
-            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #0f172a; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        #gameCanvas { display: block; width: 100%; height: 100%; box-shadow: inset 0 0 50px rgba(0,0,0,0.9); background: radial-gradient(circle at center, #1e293b 0%, #020617 100%); }
         .ui-container { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; }
         .interactive { pointer-events: auto; }
         .btn { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: all 0.1s; }
@@ -130,7 +124,6 @@
     <canvas id="gameCanvas"></canvas>
 
     <div class="ui-container z-10" id="uiLayer">
-        <!-- HUD -->
         <div id="hud" class="flex justify-between items-start opacity-0 transition-opacity duration-300">
             <div>
                 <div class="text-white font-bold text-3xl drop-shadow-md">Điểm: <span id="scoreText" class="text-yellow-400">0</span></div>
@@ -142,9 +135,7 @@
             </div>
         </div>
 
-        <!-- Screens -->
         <div id="screenContainer" class="flex-1 flex items-center justify-center">
-            <!-- Start Screen -->
             <div id="startScreen" class="bg-gray-800 bg-opacity-95 p-6 md:p-8 rounded-2xl border-2 border-blue-500 text-center shadow-[0_0_30px_rgba(59,130,246,0.3)] max-w-md w-full mx-4 flex flex-col md:flex-row gap-6 interactive">
                 <div class="flex-1">
                     <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-1 drop-shadow-lg tracking-tight">CHÉM <span class="text-red-500">BOM</span></h1>
@@ -163,7 +154,6 @@
                 </div>
             </div>
 
-            <!-- Game Over Screen -->
             <div id="gameOverScreen" class="hidden bg-gray-900 bg-opacity-95 p-8 rounded-2xl border-2 border-red-500 text-center shadow-[0_0_40px_rgba(239,68,68,0.4)] max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 interactive">
                 <h1 class="text-4xl font-extrabold text-red-500 mb-2 drop-shadow-lg uppercase">Thua Rồi!</h1>
                 <p class="text-gray-300 text-lg">Điểm của bạn</p>
@@ -194,17 +184,14 @@
         const musicToggleBtn = document.getElementById('musicToggleBtn');
         
         let isMusicPlaying = true;
-        let audioUnlocked = false; // FIX 2: Cờ kiểm tra Audio đã được mở khóa chưa
+        let audioUnlocked = false; 
         
-        // --- Hệ Thống Âm Thanh (Web Audio API) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // FIX 2: Hàm mở khóa Audio triệt để khi người dùng tương tác lần đầu
         function unlockAudio() {
             if(audioUnlocked) return;
             if(audioCtx.state === 'suspended') audioCtx.resume();
             
-            // Ép trình duyệt cho phép phát bgMusic, nếu game chưa bắt đầu thì pause ngay
             bgMusic.play().then(() => {
                 if (state !== 'PLAY') bgMusic.pause();
             }).catch(e => console.log("Unlock audio failed:", e));
@@ -294,13 +281,11 @@
                 this.y = canvas.height + this.r;
                 this.vx = rnd(-1.5, 1.5); 
                 
-                // FIX 1: Tính toán tốc độ / trọng lực an toàn
-                // baseScale giúp lực ném ổn định dù là màn hình điện thoại xoay dọc hay máy tính
                 let baseScale = Math.min(canvas.width, canvas.height) / 800;
-                baseScale = Math.max(0.6, Math.min(baseScale, 1.2)); // Cáp ở mức an toàn
+                baseScale = Math.max(0.6, Math.min(baseScale, 1.2)); 
                 let diffFactor = Math.min(1.3, 1 + (score / 400));
                 
-                this.baseScale = baseScale; // Lưu lại để dùng cho trọng lực
+                this.baseScale = baseScale; 
                 this.vy = rnd(-15, -12) * baseScale * diffFactor;
                 
                 this.isBomb = Math.random() < 0.65;
@@ -312,7 +297,6 @@
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                // Trọng lực scale theo thiết bị, quỹ đạo rơi sẽ mượt hơn
                 this.vy += 0.22 * this.baseScale; 
                 this.rot += this.rotSpd;
             }
@@ -481,8 +465,6 @@
 
             if (shake > 0) shake--;
             
-            // FIX 3: Xóa đuôi kiếm dựa trên thời gian (tan biến sau 150ms)
-            // Khắc phục triệt để lỗi đường kiếm bị treo khi giữ chuột nằm im
             const now = Date.now();
             slicePts = slicePts.filter(p => now - p.time < 150); 
         }
@@ -519,7 +501,6 @@
         function addPt(e) {
             let x = e.touches ? e.touches[0].clientX : e.clientX;
             let y = e.touches ? e.touches[0].clientY : e.clientY;
-            // FIX 3: Thêm timestamp vào point để tính decay
             slicePts.push({x, y, time: Date.now()}); 
         }
         
